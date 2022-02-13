@@ -5,7 +5,7 @@
         Field[] fields;
         Scheme scheme;
 
-        internal Table(string name, string description = null, Field[] fields = null, Scheme scheme = null) : base(name, description, AssetTypeEnum.Table)
+        internal Table(string name, Scheme scheme = null, string description = null, Field[] fields = null) : base(name, description, AssetTypeEnum.Table)
         {
             this.fields = fields;
             this.scheme = scheme;
