@@ -1,0 +1,7 @@
+node_modules
+packages
+bin
+.suo
+obj
+SqlParserJS/alontest.txt
+SqlQueryParsing/nextToken.txt
