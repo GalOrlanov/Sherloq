@@ -6,15 +6,15 @@ namespace SqlQueryParsing.DataAssets
     {
         internal string query;
         internal List<Field> fields;
-        internal int query_id;
-        internal int[] sherloq_query_executions;
+        internal int queryId;
+        internal int[] sherloqQueryExecutions;
 
-        internal Query(string query, string name = "", string description = "", int query_id = 0, int[] sherloq_query_executions = null, List<Field> fields = null) : base(name, description, AssetTypeEnum.Query)
+        internal Query(string query, string name = "", string description = "", int queryId = 0, int[] sherloqQueryExecutions = null, List<Field> fields = null) : base(name, description, AssetTypeEnum.Query)
         {
             this.query = query;
             this.fields = fields;
-            this.query_id = query_id;
-            this.sherloq_query_executions = sherloq_query_executions;
+            this.queryId = queryId;
+            this.sherloqQueryExecutions = sherloqQueryExecutions;
         }
     }
 }

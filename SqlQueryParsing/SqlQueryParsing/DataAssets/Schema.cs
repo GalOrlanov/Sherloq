@@ -4,12 +4,12 @@
     {
         internal Table[] tables;
         internal Database database;
-        internal int schema_id;
+        internal int schemaId;
 
-        internal Schema(string name, Database database, int schema_id = 0, string description = "", Table[] tables = null) : base(name, description, AssetTypeEnum.Schema)
+        internal Schema(string name, Database database, int schemaId = 0, string description = "", Table[] tables = null) : base(name, description, AssetTypeEnum.Schema)
         {
             this.tables = tables;
-            this.schema_id = schema_id;
+            this.schemaId = schemaId;
             this.database = database;
         }
     }

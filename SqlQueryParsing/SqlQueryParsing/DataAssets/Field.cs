@@ -4,13 +4,13 @@
     {
         internal string fieldType;
         internal Table table;
-        internal int field_id;
+        internal int fieldId;
 
-        internal Field(string name, Table table, string type, int field_id = 0, string description = "") : base(name, description, AssetTypeEnum.Field)
+        internal Field(string name, Table table, string type, int fieldId = 0, string description = "") : base(name, description, AssetTypeEnum.Field)
         {
             this.fieldType = type;
             this.table = table;
-            this.field_id = field_id;
+            this.fieldId = fieldId;
         }
 
         public override string ToString()
