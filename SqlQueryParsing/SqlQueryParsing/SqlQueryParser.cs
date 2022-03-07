@@ -62,19 +62,19 @@ namespace SqlQueryParsing
             }
         }
 
-        private static List<Table> GetListOfTables(string[] arrayOfTables)
+        private static List<Table> GetListOfTables(List<string> listOfStringsOfTables)
         {
             try
             {
-                var listOfTables = new List<Table>();
+                var resultListOfTables = new List<Table>();
 
-                foreach (string tableStr in arrayOfTables)
+                foreach (string tableStr in listOfStringsOfTables)
                 {
                     var tableInfoList = tableStr.Replace("::", ":").Split(':');
-                    listOfTables.Add(new Table(tableInfoList[2]));
+                    resultListOfTables.Add(new Table(tableInfoList[2]));
                 }
 
-                return listOfTables;
+                return resultListOfTables;
             }
             catch(Exception error)
             {
@@ -82,20 +82,20 @@ namespace SqlQueryParsing
             }
         }
 
-        private static List<Field> GetListOfFields(string[] arrayOfFields, List<Table> listOfTables)
+        private static List<Field> GetListOfFields(List<string> listOfStringsOfFields, List<Table> listOfTables)
         {
             try
             {
-                var listOfFields = new List<Field>();
+                var resultListOfFields = new List<Field>();
 
-                foreach (string fieldStr in arrayOfFields)
+                foreach (string fieldStr in listOfStringsOfFields)
                 {
                     var fieldInfoList = fieldStr.Replace("::", ":").Split(':');
                     Table table = listOfTables.Find(a => a.name.Equals(fieldInfoList[1]));
-                    listOfFields.Add(new Field(fieldInfoList[2], table));
+                    resultListOfFields.Add(new Field(fieldInfoList[2], table, ""));
                 }
 
-                return listOfFields;
+                return resultListOfFields;
             }
             catch (Exception error)
             {
