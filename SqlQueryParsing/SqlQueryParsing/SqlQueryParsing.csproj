@@ -39,16 +39,22 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ClientResources1.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>ClientResources.resx</DependentUpon>
+    </Compile>
     <Compile Include="Connectors\AWSAthenaConnector.cs" />
     <Compile Include="Connectors\AWSConnectorHelper.cs" />
     <Compile Include="DataAssets\AssetTypeEnum.cs" />
     <Compile Include="DataAssets\DataAsset.cs" />
     <Compile Include="DataAssets\Field.cs" />
     <Compile Include="DataAssets\Query.cs" />
-    <Compile Include="DataAssets\Scheme.cs" />
+    <Compile Include="DataAssets\Database.cs" />
+    <Compile Include="DataAssets\Schema.cs" />
     <Compile Include="DataAssets\Table.cs" />
     <Compile Include="Connectors\DBConnectors\DbAPI.cs" />
-    <Compile Include="Connectors\DBConnectors\DBConnection.cs" />
+    <Compile Include="Connectors\DBConnectors\DbConnection.cs" />
     <Compile Include="Exceptions\ParsingException.cs" />
     <Compile Include="ParsedQueryJsonProperties.cs" />
     <Compile Include="Program.cs" />
@@ -133,7 +139,12 @@
     <Analyzer Include="..\packages\AWSSDK.S3.3.7.7.23\analyzers\dotnet\cs\AWSSDK.S3.CodeAnalysis.dll" />
     <Analyzer Include="..\packages\AWSSDK.SecurityToken.3.7.1.112\analyzers\dotnet\cs\AWSSDK.SecurityToken.CodeAnalysis.dll" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <EmbeddedResource Include="ClientResources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>ClientResources1.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="..\packages\System.Text.Json.6.0.0\build\System.Text.Json.targets" Condition="Exists('..\packages\System.Text.Json.6.0.0\build\System.Text.Json.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
