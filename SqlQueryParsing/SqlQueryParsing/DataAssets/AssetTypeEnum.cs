@@ -5,6 +5,7 @@
         Query,
         Field,
         Table,
-        Scheme,
+        Schema,
+        Database,
     }
 }

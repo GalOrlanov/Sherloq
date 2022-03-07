@@ -2,13 +2,15 @@
 {
     internal class Table : DataAsset
     {
-        Field[] fields;
-        Scheme scheme;
+        internal Field[] fields;
+        internal Schema schema;
+        internal int tableId;
 
-        internal Table(string name, Scheme scheme = null, string description = null, Field[] fields = null) : base(name, description, AssetTypeEnum.Table)
+        internal Table(string name, Schema schema = null, int tableId = 0, string description = "", Field[] fields = null) : base(name, description, AssetTypeEnum.Table)
         {
             this.fields = fields;
-            this.scheme = scheme;
+            this.schema = schema;
+            this.tableId = tableId;
         }
 
         public override string ToString()
