@@ -10,17 +10,16 @@ using System.Threading.Tasks;
 
 namespace SqlQueryParsing.DBConnectors
 {
-    internal class DBConnection
+    internal class DbConnection
     {
         internal NpgsqlConnection connection;
 
-        internal DBConnection(string dbAddress, string roleARN, int port, string db_user, RegionEndpoint region, string externalId)
+        internal DbConnection(string dbAddress, string roleARN, int port, string dbUser, RegionEndpoint region, string externalId)
         {
-            //var credentials = AWSConnectorHelper.AssumeRole(roleARN, externalId);
-            //var token = RDSAuthTokenGenerator.GenerateAuthToken(credentials, region, dbAddress, port, db_user);
+            var credentials = AWSConnectorHelper.AssumeRole(roleARN, externalId);
+            var token = RDSAuthTokenGenerator.GenerateAuthToken(credentials, region, dbAddress, port, dbUser);
 
-            //var connectionString = $"Host={dbAddress};Username={db_user};Password={token};Database=postgres;SslMode=Prefer;port={port};";
-            var connectionString = $"Host={dbAddress};Username=postgres;Password=Aip123456789;Database=postgres;SslMode=Prefer;port={port};";
+            var connectionString = $"Host={dbAddress};Username={dbUser};Password={token};Database=postgres;SslMode=Prefer;port={port};";
 
             this.connection = new NpgsqlConnection(connectionString);
         }

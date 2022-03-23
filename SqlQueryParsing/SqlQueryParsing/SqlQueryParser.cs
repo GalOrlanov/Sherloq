@@ -6,23 +6,24 @@ using SqlQueryParsing.DataAssets;
 using Newtonsoft.Json;
 using System;
 using SqlQueryParsing.Exceptions;
+using SqlQueryParsing.DBConnectors;
 
 namespace SqlQueryParsing
 {
     internal class SqlQueryParser
     {
-        internal static QueryParsingResult ParseQuery(string query)
+        internal static QueryParsingResult ParseQuery(DbConnection dbConnection, Query query, Database database)
         {
             try
             {
-                var parsedQuery = ParseQueryJSConnector(query);
+                var parsedQueryString = ParseQueryJSConnector(query.query);
 
-                if (parsedQuery.Equals(""))
+                if (parsedQueryString.Equals(""))
                 {
                     throw new Exception();
                 }
 
-                return ParsedStringtoQueryParsingResult(parsedQuery);
+                return ParsedStringtoQueryParsingResult(dbConnection, parsedQueryString, database, query);
             }
             catch (Exception ex)
             {
@@ -62,7 +63,22 @@ namespace SqlQueryParsing
             }
         }
 
-        private static List<Table> GetListOfTables(List<string> listOfStringsOfTables)
+        private static QueryParsingResult ParsedStringtoQueryParsingResult(DbConnection dbConnection, string parsedQuery, Database database, Query query)
+        {
+            var parsedJson = JsonConvert.DeserializeObject<ParsedQueryJsonProperties>(parsedQuery);
+            var listOfTables = GetListOfTables(dbConnection, parsedJson.TableList, database);
+            var listOfFields = GetListOfFields(dbConnection, parsedJson.FieldList, listOfTables, query);
+            var ast = GetASTasJson(parsedJson.Ast);
+
+            return new QueryParsingResult()
+            {
+                listOfFields = listOfFields,
+                listOfTables = listOfTables,
+                queryAST = ast
+            };
+        }
+
+        private static List<Table> GetListOfTables(DbConnection dbConnection, List<string> listOfStringsOfTables, Database database)
         {
             try
             {
@@ -71,7 +87,18 @@ namespace SqlQueryParsing
                 foreach (string tableStr in listOfStringsOfTables)
                 {
                     var tableInfoList = tableStr.Replace("::", ":").Split(':');
-                    resultListOfTables.Add(new Table(tableInfoList[2]));
+                    var schemaName = tableInfoList[1];
+                    var tableName = tableInfoList[2];
+                    var schema = DbAPI.GetSchema(dbConnection, database.name, schemaName);
+
+                    if (schema == null)
+                    {
+                        schema = DbAPI.WriteNewSchema(dbConnection, new Schema(schemaName, database));
+                    }
+
+                    var table = DbAPI.GetTable(dbConnection, database.name, schema.name, tableName);
+
+                    resultListOfTables.Add(table);
                 }
 
                 return resultListOfTables;
@@ -82,7 +109,7 @@ namespace SqlQueryParsing
             }
         }
 
-        private static List<Field> GetListOfFields(List<string> listOfStringsOfFields, List<Table> listOfTables)
+        private static List<Field> GetListOfFields(DbConnection dbConnection, List<string> listOfStringsOfFields, List<Table> listOfTables, Query query)
         {
             try
             {
@@ -91,8 +118,18 @@ namespace SqlQueryParsing
                 foreach (string fieldStr in listOfStringsOfFields)
                 {
                     var fieldInfoList = fieldStr.Replace("::", ":").Split(':');
-                    Table table = listOfTables.Find(a => a.name.Equals(fieldInfoList[1]));
-                    resultListOfFields.Add(new Field(fieldInfoList[2], table, ""));
+                    var tableName = fieldInfoList[1];
+                    var fieldName = fieldInfoList[2];
+
+                    if (tableName == "null")
+                    {
+                        // To Do: find list of possible tables
+                    }
+
+                    Table table = listOfTables.Find(x => x.name.Equals(tableName));
+                    var field = DbAPI.GetField(dbConnection, table.schema.database.name, table.schema.name, tableName, fieldName);
+
+                    resultListOfFields.Add(field);
                 }
 
                 return resultListOfFields;
@@ -101,7 +138,7 @@ namespace SqlQueryParsing
             {
                 throw new ParsingException($"Failed to get list of fields from query. Message: {error.Message}");
             }
-}
+        }
 
         private static JObject GetASTasJson(string queryTreeString)
         {
@@ -120,21 +157,6 @@ namespace SqlQueryParsing
             {
                 throw new ParsingException($"Failed to get AST from query. Message: {error.Message}");
             }
-}
-
-        private static QueryParsingResult ParsedStringtoQueryParsingResult(string parsedQuery)
-        {
-            var parsedJson = JsonConvert.DeserializeObject<ParsedQueryJsonProperties>(parsedQuery);
-            var listOfTables = GetListOfTables(parsedJson.TableList);
-            var listOfFields = GetListOfFields(parsedJson.FieldList, listOfTables);
-            var ast = GetASTasJson(parsedJson.Ast);
-
-            return new QueryParsingResult()
-            {
-                listOfFields = listOfFields,
-                listOfTables = listOfTables,
-                queryAST = ast
-            };
         }
     }
 }

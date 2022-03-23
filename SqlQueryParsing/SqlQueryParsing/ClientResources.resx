@@ -129,6 +129,9 @@
   <data name="FieldsTableName" xml:space="preserve">
     <value>fields</value>
   </data>
+  <data name="FieldsWithUnclearPath" xml:space="preserve">
+    <value>fields_with_unclear_path</value>
+  </data>
   <data name="ParsedQueriesFieldAccessLog" xml:space="preserve">
     <value>parsed_queries_field_access_log</value>
   </data>
