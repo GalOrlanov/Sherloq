@@ -97,6 +97,15 @@ namespace SqlQueryParsing {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to fields_with_unclear_path.
+        /// </summary>
+        internal static string FieldsWithUnclearPath {
+            get {
+                return ResourceManager.GetString("FieldsWithUnclearPath", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to parsed_queries_field_access_log.
         /// </summary>
         internal static string ParsedQueriesFieldAccessLog {

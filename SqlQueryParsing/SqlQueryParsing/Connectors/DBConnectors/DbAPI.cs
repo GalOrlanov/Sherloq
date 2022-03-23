@@ -1,15 +1,15 @@
 ﻿using Amazon.Athena.Model;
 using Npgsql;
 using SqlQueryParsing.DataAssets;
+using SqlQueryParsing.Exceptions;
 using System;
-
 using Database = SqlQueryParsing.DataAssets.Database;
 
 namespace SqlQueryParsing.DBConnectors
 {
     internal class DbAPI
     {
-        internal static void WriteRawQueryData(DbConnection dbConnection, QueryExecution queryExecution, string tableName) 
+        internal static int WriteRawQueryData(DbConnection dbConnection, QueryExecution queryExecution) 
         {
             var queryExecutionId = Guid.Parse(queryExecution.QueryExecutionId);
             var query = queryExecution.Query;
@@ -34,10 +34,10 @@ namespace SqlQueryParsing.DBConnectors
             var workGroup = queryExecution.WorkGroup ?? "";
 
 
-            var sql = $"INSERT INTO {tableName} VALUES(@queryExecutionId, @query, @querySubmissionDateTime, @queryCompletionDateTime, @catalog, " +
+            var sql = $"INSERT INTO {ClientResources.AppsFlyerSchemaName}.{ClientResources.AthenaRawDataQueryHistoryTableName} VALUES(@queryExecutionId, @query, @querySubmissionDateTime, @queryCompletionDateTime, @catalog, " +
                 $"@database, @encryptionConfigurationKmsKey, @encryptionConfigurationEncryptionOption, @outputLocation, @statementType, " +
                 $"@dataManifestLocation, @dataScannedInBytes, @engineExecutionTimeInMillis, @queryPlanningTimeInMillis, @queryQueueTimeInMillis, " +
-                $"@serviceProcessingTimeInMillis, @totalExecutionTimeInMillis, @athenaError, @returnStateOfQueryRun, @returnStateChangeReason, @workGroup);";
+                $"@serviceProcessingTimeInMillis, @totalExecutionTimeInMillis, @athenaError, @returnStateOfQueryRun, @returnStateChangeReason, @workGroup) RETURNING sherloq_query_execution_id;";
 
             var cmd = new NpgsqlCommand(sql, dbConnection.connection);
     
@@ -62,98 +62,134 @@ namespace SqlQueryParsing.DBConnectors
             cmd.Parameters.AddWithValue("@querySubmissionDateTime", querySubmissionDateTime);
             cmd.Parameters.AddWithValue("@queryCompletionDateTime", queryCompletionDateTime);
             cmd.Parameters.AddWithValue("@workGroup", workGroup);
-            cmd.ExecuteNonQuery();
+            var sherloqQueryExecutionId = int.Parse(cmd.ExecuteScalar().ToString());
+
+            return sherloqQueryExecutionId;
         }
 
-        internal static void WriteNewDatabase(DbConnection dbConnection, Database database)
+        internal static Database WriteNewDatabase(DbConnection dbConnection, Database database)
         {
             dbConnection.OpenConnection();
-            var sql = $"INSERT INTO {ClientResources.AppsFlyerSchemaName}.{ClientResources.DatabasesTableName} (db_name, db_description) VALUES(@db_name, @db_description)";
+            var sql = $"INSERT INTO {ClientResources.AppsFlyerSchemaName}.{ClientResources.DatabasesTableName} (db_name, db_description) VALUES(@db_name, @db_description) RETURNING db_id";
             var cmd = new NpgsqlCommand(sql, dbConnection.connection);
             cmd.Parameters.AddWithValue("@db_name", database.name);
             cmd.Parameters.AddWithValue("@db_description", database.description);
-            cmd.ExecuteNonQuery();
+            var dbId = int.Parse(cmd.ExecuteScalar().ToString());
+            database.dbId = dbId;
             dbConnection.CloseConnection();
+
+            return database;
         }
 
-        internal static void WriteNewSchema(DbConnection dbConnection, Schema schema)
+        internal static Schema WriteNewSchema(DbConnection dbConnection, Schema schema)
         {
             dbConnection.OpenConnection();
-            var sql = $"INSERT INTO {ClientResources.AppsFlyerSchemaName}.{ClientResources.SchemasTableName} (schema_name, schema_description, dbId) VALUES(@schema_name, @schema_description, @dbId)";
+            var sql = $"INSERT INTO {ClientResources.AppsFlyerSchemaName}.{ClientResources.SchemasTableName} (schema_name, schema_description, db_id) VALUES(@schemaName, @schemaDescription, @dbId) RETURNING schema_id";
             var cmd = new NpgsqlCommand(sql, dbConnection.connection);
-            cmd.Parameters.AddWithValue("@schema_name", schema.name);
-            cmd.Parameters.AddWithValue("@schema_description", schema.description);
+            cmd.Parameters.AddWithValue("@schemaName", schema.name);
+            cmd.Parameters.AddWithValue("@schemaDescription", schema.description);
             cmd.Parameters.AddWithValue("@dbId", schema.database.dbId);
-            cmd.ExecuteNonQuery();
+            var schemaId = int.Parse(cmd.ExecuteScalar().ToString());
+            schema.schemaId = schemaId;
             dbConnection.CloseConnection();
+
+            return schema;
         }
 
-        internal static void WriteNewTable(DbConnection dbConnection, Table table)
+        internal static Table WriteNewTable(DbConnection dbConnection, Table table)
         {
             dbConnection.OpenConnection();
-            var sql = $"INSERT INTO {ClientResources.AppsFlyerSchemaName}.{ClientResources.TablesTableName} (table_name, table_description, schemaId, dbId) VALUES(@table_name, @table_description, @schemaId, @dbId)";
+            var sql = $"INSERT INTO {ClientResources.AppsFlyerSchemaName}.{ClientResources.TablesTableName} (table_name, table_description, schema_id, db_id) VALUES(@tableName, @tableDescription, @schemaId, @dbId) RETURNING table_id";
             var cmd = new NpgsqlCommand(sql, dbConnection.connection);
-            cmd.Parameters.AddWithValue("@table_name", table.name);
-            cmd.Parameters.AddWithValue("@table_description", table.description);
+            cmd.Parameters.AddWithValue("@tableName", table.name);
+            cmd.Parameters.AddWithValue("@tableDescription", table.description);
             cmd.Parameters.AddWithValue("@schemaId", table.schema.schemaId);
             cmd.Parameters.AddWithValue("@dbId", table.schema.database.dbId);
+            var tableId = int.Parse(cmd.ExecuteScalar().ToString());
+            table.tableId = tableId;
             cmd.ExecuteNonQuery();
             dbConnection.CloseConnection();
+
+            return table;
         }
 
-        internal static void WriteNewField(DbConnection dbConnection, Field field)
+        internal static Field WriteNewField(DbConnection dbConnection, Field field)
         {
             dbConnection.OpenConnection();
-            var sql = $"INSERT INTO {ClientResources.AppsFlyerSchemaName}.{ClientResources.FieldsTableName} (field_name, field_description, field_type, tableId, schemaId, dbId) VALUES(@field_name, @field_description, @field_type, @tableId, @schemaId, @dbId)";
+            var sql = $"INSERT INTO {ClientResources.AppsFlyerSchemaName}.{ClientResources.FieldsTableName} (field_name, field_description, field_type, table_id, schema_id, db_id) VALUES(@fieldName, @fieldDescription, @fieldType, @tableId, @schemaId, @dbId) RETURNING field_id";
             var cmd = new NpgsqlCommand(sql, dbConnection.connection);
-            cmd.Parameters.AddWithValue("@field_name", field.name);
-            cmd.Parameters.AddWithValue("@field_description", field.description);
-            cmd.Parameters.AddWithValue("@field_type", field.fieldType.ToString());
+            cmd.Parameters.AddWithValue("@fieldName", field.name);
+            cmd.Parameters.AddWithValue("@fieldDescription", field.description);
+            cmd.Parameters.AddWithValue("@fieldType", field.fieldType.ToString());
             cmd.Parameters.AddWithValue("@tableId", field.table.tableId);
             cmd.Parameters.AddWithValue("@schemaId", field.table.schema.schemaId);
             cmd.Parameters.AddWithValue("@dbId", field.table.schema.database.dbId);
+            var fieldId = int.Parse(cmd.ExecuteScalar().ToString());
+            field.fieldId = fieldId;
             cmd.ExecuteNonQuery();
             dbConnection.CloseConnection();
+
+            return field;
         }
 
-        internal static void writeNewQuery(DbConnection dbConnection, Query query)
+        internal static Query WriteNewQuery(DbConnection dbConnection, Query query)
         {
             dbConnection.OpenConnection();
-            var sql = $"INSERT INTO {ClientResources.AppsFlyerSchemaName}.{ClientResources.QueriesTableName} (query, query_description, query_name) VALUES(@query, @query_description, @query_name)";
+            var sql = $"INSERT INTO {ClientResources.AppsFlyerSchemaName}.{ClientResources.QueriesTableName} (query, query_description, query_name, sherloq_query_executions) VALUES(@query, @queryDescription, @queryName, @sherloqQueryExecutions) RETURNING query_id";
             var cmd = new NpgsqlCommand(sql, dbConnection.connection);
             cmd.Parameters.AddWithValue("@query", query.query);
-            cmd.Parameters.AddWithValue("@query_description", query.description);
-            cmd.Parameters.AddWithValue("@query_name", query.name);
-            cmd.ExecuteNonQuery();
+            cmd.Parameters.AddWithValue("@queryDescription", query.description);
+            cmd.Parameters.AddWithValue("@queryName", query.name);
+            cmd.Parameters.AddWithValue("@sherloqQueryExecutions", query.sherloqQueryExecutions);
+            var queryId = int.Parse(cmd.ExecuteScalar().ToString());
+            query.queryId = queryId;
             dbConnection.CloseConnection();
+
+            return query;
         }
 
-        internal static void WriteFieldToAccessLog(DbConnection dbConnection, Field field, Query query, DateTime querySubmissionDateTime)
+        internal static void WriteFieldToAccessLog(DbConnection dbConnection, Field field, Query query, DateTime querySubmissionDateTime, int sherloqQueryExecutionId)
         {
             dbConnection.OpenConnection();
-            var sql = $"INSERT INTO {ClientResources.AppsFlyerSchemaName}.{ClientResources.ParsedQueriesFieldAccessLog} (fieldId, tableId, schemaId, dbId, queryId sherloq_query_execution_id, query_submission_datetime) VALUES(@fieldId, @tableId, @schemaId, @dbId, @queryId, @sherloq_query_execution_id, @query_submission_datetime)";
+            var sql = $"INSERT INTO {ClientResources.AppsFlyerSchemaName}.{ClientResources.ParsedQueriesFieldAccessLog} (field_id, table_id, schema_id, db_id, query_id sherloq_query_execution_id, query_submission_datetime) VALUES(@fieldId, @tableId, @schemaId, @dbId, @queryId, @sherloqQueryExecutionId, @querySubmissionDatetime)";
             var cmd = new NpgsqlCommand(sql, dbConnection.connection);
             cmd.Parameters.AddWithValue("@fieldId", field.fieldId);
             cmd.Parameters.AddWithValue("@tableId", field.table.tableId);
             cmd.Parameters.AddWithValue("@schemaId", field.table.schema.schemaId);
             cmd.Parameters.AddWithValue("@dbId", field.table.schema.database.dbId);
             cmd.Parameters.AddWithValue("@queryId", query.queryId);
-            cmd.Parameters.AddWithValue("@sherloq_query_execution_id", "");
-            cmd.Parameters.AddWithValue("@query_submission_datetime", querySubmissionDateTime);
+            cmd.Parameters.AddWithValue("@sherloqQueryExecutionId", sherloqQueryExecutionId);
+            cmd.Parameters.AddWithValue("@querySubmissionDatetime", querySubmissionDateTime);
             cmd.ExecuteNonQuery();
             dbConnection.CloseConnection();
         }
+
+        //internal static void WriteFieldWithUnclearPath(DbConnection dbConnection, string fieldName, List<int> possibleTableIds, Query query)
+        //{
+        //    dbConnection.OpenConnection();
+        //    var sql = $"INSERT INTO {ClientResources.AppsFlyerSchemaName}.{ClientResources.ParsedQueriesFieldAccessLog} (field_name, table_id, schema_id, db_id, query_id sherloq_query_execution_id, query_submission_datetime) VALUES(@fieldId, @tableId, @schemaId, @dbId, @queryId, @sherloqQueryExecutionId, @querySubmissionDatetime)";
+        //    var cmd = new NpgsqlCommand(sql, dbConnection.connection);
+        //    cmd.Parameters.AddWithValue("@fieldId", field.fieldId);
+        //    cmd.Parameters.AddWithValue("@tableId", field.table.tableId);
+        //    cmd.Parameters.AddWithValue("@schemaId", field.table.schema.schemaId);
+        //    cmd.Parameters.AddWithValue("@dbId", field.table.schema.database.dbId);
+        //    cmd.Parameters.AddWithValue("@queryId", query.queryId);
+        //    cmd.Parameters.AddWithValue("@sherloqQueryExecutionId", "");
+        //    cmd.Parameters.AddWithValue("@querySubmissionDatetime", querySubmissionDateTime);
+        //    cmd.ExecuteNonQuery();
+        //    dbConnection.CloseConnection();
+        //}
 
         //Get db from db or null if db doesn't exist
         internal static Database GetDb(DbConnection dbConnection, string dbName)
         {
             dbConnection.OpenConnection();
-            var sql = $"SELECT * FROM {ClientResources.AppsFlyerSchemaName}.{ClientResources.DatabasesTableName} WHERE db_name = @db_name";
+            var sql = $"SELECT * FROM {ClientResources.AppsFlyerSchemaName}.{ClientResources.DatabasesTableName} WHERE db_name = @dbName";
             Database db = null;
 
             using (NpgsqlCommand cmd = new NpgsqlCommand(sql, dbConnection.connection))
             {
-                cmd.Parameters.AddWithValue("@db_name", dbName);
+                cmd.Parameters.AddWithValue("@dbName", dbName);
                 NpgsqlDataReader reader = cmd.ExecuteReader();
                 reader.Read();
 
@@ -163,7 +199,7 @@ namespace SqlQueryParsing.DBConnectors
                     return null;
                 }
 
-                var dbId = Int32.Parse(reader["dbId"].ToString());
+                var dbId = int.Parse(reader["db_id"].ToString());
                 var dbDescription = reader["db_description"].ToString();
                 db = new Database(dbName, dbId, dbDescription);
             }
@@ -176,13 +212,13 @@ namespace SqlQueryParsing.DBConnectors
         internal static Schema GetSchema(DbConnection dbConnection, string dbName, string schemaName)
         {
             var db = GetDb(dbConnection, dbName);
-            var sql = $"SELECT * FROM {ClientResources.AppsFlyerSchemaName}.{ClientResources.SchemasTableName} WHERE schema_name = @schema_name AND dbId = @dbId";
+            var sql = $"SELECT * FROM {ClientResources.AppsFlyerSchemaName}.{ClientResources.SchemasTableName} WHERE schema_name = @schemaName AND db_id = @dbId";
             Schema schema = null;
 
             dbConnection.OpenConnection();
             using (NpgsqlCommand cmd = new NpgsqlCommand(sql, dbConnection.connection))
             {
-                cmd.Parameters.AddWithValue("@schema_name", schemaName);
+                cmd.Parameters.AddWithValue("@schemaName", schemaName);
                 cmd.Parameters.AddWithValue("@dbId", db.dbId);
                 NpgsqlDataReader reader = cmd.ExecuteReader();
                 reader.Read();
@@ -193,7 +229,7 @@ namespace SqlQueryParsing.DBConnectors
                     return null;
                 }
 
-                var schemaId = Int32.Parse(reader["schemaId"].ToString());
+                var schemaId = int.Parse(reader["schema_id"].ToString());
                 var schemaDescription = reader["schema_description"].ToString();
                 schema = new Schema(schemaName, db, schemaId , schemaDescription);
             }
@@ -206,13 +242,13 @@ namespace SqlQueryParsing.DBConnectors
         internal static Table GetTable(DbConnection dbConnection, string dbName, string schemaName, string tableName)
         {
             var schema = GetSchema(dbConnection, dbName, schemaName);
-            var sql = $"SELECT * FROM {ClientResources.AppsFlyerSchemaName}.{ClientResources.TablesTableName} WHERE table_name = @table_name AND schemaId = @schemaId";
+            var sql = $"SELECT * FROM {ClientResources.AppsFlyerSchemaName}.{ClientResources.TablesTableName} WHERE table_name = @tableName AND schema_id = @schemaId";
             Table table = null;
 
             dbConnection.OpenConnection();
             using (NpgsqlCommand cmd = new NpgsqlCommand(sql, dbConnection.connection))
             {
-                cmd.Parameters.AddWithValue("@table_name", tableName);
+                cmd.Parameters.AddWithValue("@tableName", tableName);
                 cmd.Parameters.AddWithValue("@schemaId", schema.schemaId);
                 NpgsqlDataReader reader = cmd.ExecuteReader();
                 reader.Read();
@@ -223,7 +259,7 @@ namespace SqlQueryParsing.DBConnectors
                     return null;
                 }
 
-                var tableId = Int32.Parse(reader["tableId"].ToString());
+                var tableId = int.Parse(reader["table_id"].ToString());
                 var tableDescription = reader["table_description"].ToString();
                 table = new Table(tableName, schema, tableId, tableDescription);
             }
@@ -236,13 +272,13 @@ namespace SqlQueryParsing.DBConnectors
         internal static Field GetField(DbConnection dbConnection, string dbName, string schemaName, string tableName, string fieldName)
         {
             var table = GetTable(dbConnection, dbName, schemaName, tableName);
-            var sql = $"SELECT * FROM {ClientResources.AppsFlyerSchemaName}.{ClientResources.FieldsTableName} WHERE field_name = @field_name AND tableId = @tableId";
+            var sql = $"SELECT * FROM {ClientResources.AppsFlyerSchemaName}.{ClientResources.FieldsTableName} WHERE field_name = @fieldName AND table_id = @tableId";
             Field field = null;
 
             dbConnection.OpenConnection();
             using (NpgsqlCommand cmd = new NpgsqlCommand(sql, dbConnection.connection))
             {
-                cmd.Parameters.AddWithValue("@field_name", fieldName);
+                cmd.Parameters.AddWithValue("@fieldName", fieldName);
                 cmd.Parameters.AddWithValue("@tableId", table.tableId);
                 NpgsqlDataReader reader = cmd.ExecuteReader();
                 reader.Read();
@@ -253,7 +289,7 @@ namespace SqlQueryParsing.DBConnectors
                     return null;
                 }
 
-                var fieldId = Int32.Parse(reader["fieldId"].ToString());
+                var fieldId = int.Parse(reader["field_id"].ToString());
                 var fieldType = reader["field_type"].ToString();
                 var fieldDescription = reader["field_description"].ToString();
                 field = new Field(fieldName, table, fieldType, fieldId, fieldDescription);
@@ -282,7 +318,7 @@ namespace SqlQueryParsing.DBConnectors
                     return null;
                 }
 
-                var queryId = Int32.Parse(reader["queryId"].ToString());
+                var queryId = int.Parse(reader["query_id"].ToString());
                 var queryDescription = reader["query_description"].ToString();
                 var queryName = reader["query_name"].ToString();
                 var sherloqQueryExecutions = Convert.IsDBNull(reader["sherloq_query_executions"]) ? null : (int[])reader["sherloq_query_executions"];
@@ -293,15 +329,15 @@ namespace SqlQueryParsing.DBConnectors
             return query;
         }
 
-        internal static void AddQueryExecutionIdToQuery(DbConnection dbConnection, Query query, int sherloqQueryExecutionId)
+        internal static void AddQueryExecutionIdToListInQuery(DbConnection dbConnection, Query query, int sherloqQueryExecutionId)
         {
-            var sql = $"UPDATE {ClientResources.AppsFlyerSchemaName}.{ClientResources.QueriesTableName} SET sherloq_query_executions = array_append(sherloq_query_executions, @sherloq_query_execution_id) WHERE query = @query";
+            var sql = $"UPDATE {ClientResources.AppsFlyerSchemaName}.{ClientResources.QueriesTableName} SET sherloq_query_executions = array_append(sherloq_query_executions, @sherloqQueryExecutionId) WHERE query = @query";
             
             dbConnection.OpenConnection();
             using (NpgsqlCommand cmd = new NpgsqlCommand(sql, dbConnection.connection))
             {
                 cmd.Parameters.AddWithValue("@query", query.query);
-                cmd.Parameters.AddWithValue("@sherloq_query_execution_id", sherloqQueryExecutionId);
+                cmd.Parameters.AddWithValue("@sherloqQueryExecutionId", sherloqQueryExecutionId);
                 cmd.ExecuteNonQuery();
             }
             dbConnection.CloseConnection();
