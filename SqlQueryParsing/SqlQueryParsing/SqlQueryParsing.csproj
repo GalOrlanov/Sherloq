@@ -55,6 +55,7 @@
     <Compile Include="DataAssets\Table.cs" />
     <Compile Include="Connectors\DBConnectors\DbAPI.cs" />
     <Compile Include="Connectors\DBConnectors\DbConnection.cs" />
+    <Compile Include="DataStructureHelper.cs" />
     <Compile Include="Exceptions\NoQueryExecutionIdException.cs" />
     <Compile Include="Exceptions\ParsingException.cs" />
     <Compile Include="ParsedQueryJsonProperties.cs" />

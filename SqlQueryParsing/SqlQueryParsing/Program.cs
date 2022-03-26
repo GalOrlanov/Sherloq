@@ -18,9 +18,25 @@ namespace SqlQueryParsing
         {
             //DbAPI.WriteRawQueryData();
 
-            var query = @"select * from table22 where (field36 like '17.%' or field36 like '15.%') and table22.field38 in (select field38 from table3 where table22.year=table3.year and table22.field38=table3.field38 and field22 ='לא נמצאה סיבה מתאימה עבור תוצאת חישוב זכאות, יש להבין מה גרם לתוצאת החישוב הזו');"; 
+            var dbAddress = "appsflyer.cabtgkt0rfzz.eu-west-1.rds.amazonaws.com";
+            var dbRoleARN = "arn:aws:iam::872745627007:role/POC-Role-test";
+            var port = 5432;
+            var dbUser = "db_user";
+            var region = RegionEndpoint.EUWest1;
+            var externalId = "111";
+            //var customerRoleARN = "arn:aws:iam::872745627007:role/POC-Role-test";
+            //var externalId = "111";
+            var customerRoleARN = "arn:aws:iam::195229424603:role/ext_sherloq_athena";
+            var customerExternalId = "Sher2022";
+            //var roleARN = "arn:aws:iam::185308078728:role/ext_sherloq_s3";
+            //var externalId = "Sher2022";
+            var dbConnection = new DbConnection(dbAddress, dbRoleARN, port, dbUser, region, externalId);
 
-            var parsedQuery = SqlQueryParser.ParseQuery(query);
+
+            var query = @"select * from table22 where (field36 like '17.%' or field36 like '15.%') and table22.field38 in (select field38 from table3 where table22.year=table3.year and table22.field38=table3.field38 and field22 ='לא נמצאה סיבה מתאימה עבור תוצאת חישוב זכאות, יש להבין מה גרם לתוצאת החישוב הזו');";
+            var queryQuery = new Query(query);
+
+            var parsedQuery = SqlQueryParser.ParseQuery(dbConnection, queryQuery, null);
             var listOfTables = parsedQuery.listOfTables;
             var listOfFields = parsedQuery.listOfFields;
             var ast = parsedQuery.queryAST;
@@ -43,22 +59,9 @@ namespace SqlQueryParsing
             //var accessKeyId = "AKIA4WM5RNV7Q4DZUGO4";
             //var secretAccessKey = "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";
             //AmazonAthenaClient amazonAthenaClient = new AmazonAthenaClient(accessKeyId, secretAccessKey, Amazon.RegionEndpoint.EUWest1);
-            var dbAddress = "appsflyer.cabtgkt0rfzz.eu-west-1.rds.amazonaws.com";
-            var dbRoleARN = "arn:aws:iam::872745627007:role/POC-Role-test";
-            var port = 5432;
-            var dbUser = "db_user";
-            var region = RegionEndpoint.EUWest1;
-            var externalId = "111";
-            //var customerRoleARN = "arn:aws:iam::872745627007:role/POC-Role-test";
-            //var externalId = "111";
-            var customerRoleARN = "arn:aws:iam::195229424603:role/ext_sherloq_athena";
-            var customerExternalId = "Sher2022";
-            //var roleARN = "arn:aws:iam::185308078728:role/ext_sherloq_s3";
-            //var externalId = "Sher2022";
-            var dbConnection = new DBConnection(dbAddress, dbRoleARN, port, dbUser, region, externalId);
 
             var athenaConnector = new AWSAthenaConnector(customerRoleARN, customerExternalId, region);
-            var latestQueries = athenaConnector.GetLatestQueries(dbConnection);
+            //var latestQueries = athenaConnector.GetLatestQueries(dbConnection);
             //var tableName = "testUniqueKeys";
           
             //var count = 1;
