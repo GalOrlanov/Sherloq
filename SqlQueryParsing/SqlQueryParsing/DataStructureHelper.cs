@@ -10,7 +10,7 @@ namespace SqlQueryParsing
 {
     internal class DataStructureHelper
     {
-        internal string GetSomething(DbConnection DbConnection, QueryParsingResult queryParsingResult)
+        internal string GetListOfFields(DbConnection DbConnection, QueryParsingResult queryParsingResult)
         {
 
             //open dbConnection

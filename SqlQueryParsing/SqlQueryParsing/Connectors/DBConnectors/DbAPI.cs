@@ -239,17 +239,16 @@ namespace SqlQueryParsing.DBConnectors
         }
 
         //Get table from db or null if table doesn't exist
-        internal static Table GetTable(DbConnection dbConnection, string dbName, string schemaName, string tableName)
+        internal static Table GetTable(DbConnection dbConnection, string dbName, string tableName)
         {
-            var schema = GetSchema(dbConnection, dbName, schemaName);
-            var sql = $"SELECT * FROM {ClientResources.AppsFlyerSchemaName}.{ClientResources.TablesTableName} WHERE table_name = @tableName AND schema_id = @schemaId";
+            var schema = GetSchema(dbConnection, dbName, tableName);
+            var sql = $"SELECT * FROM {ClientResources.AppsFlyerSchemaName}.{ClientResources.TablesTableName} WHERE table_name = @tableName";
             Table table = null;
 
             dbConnection.OpenConnection();
             using (NpgsqlCommand cmd = new NpgsqlCommand(sql, dbConnection.connection))
             {
                 cmd.Parameters.AddWithValue("@tableName", tableName);
-                cmd.Parameters.AddWithValue("@schemaId", schema.schemaId);
                 NpgsqlDataReader reader = cmd.ExecuteReader();
                 reader.Read();
 
@@ -269,9 +268,9 @@ namespace SqlQueryParsing.DBConnectors
         }
 
         //Get field from db or null if field doesn't exist
-        internal static Field GetField(DbConnection dbConnection, string dbName, string schemaName, string tableName, string fieldName)
+        internal static Field GetField(DbConnection dbConnection, string dbName, string tableName, string fieldName)
         {
-            var table = GetTable(dbConnection, dbName, schemaName, tableName);
+            var table = GetTable(dbConnection, dbName, tableName);
             var sql = $"SELECT * FROM {ClientResources.AppsFlyerSchemaName}.{ClientResources.FieldsTableName} WHERE field_name = @fieldName AND table_id = @tableId";
             Field field = null;
 
